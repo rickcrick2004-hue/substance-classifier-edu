@@ -28,7 +28,7 @@
             padding: 0;
             background-color: var(--bg-color);
             color: #1f2937;
-            overflow: hidden; /* スクロール防止 */
+            /* overflow: hidden; を削除してスクロール可能に修正 */
             touch-action: manipulation;
         }
 
@@ -37,9 +37,11 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh; /* heightからmin-heightに変更し、見切れ時にスクロールさせる */
             width: 100vw;
             background: linear-gradient(135deg, #eef2ff, #e0f2fe);
+            padding: 50px 20px; /* 見切れ防止のため上下に余白を追加 */
+            box-sizing: border-box;
         }
 
         h1 {
@@ -80,7 +82,9 @@
             display: none;
             flex-direction: column;
             height: 100vh;
+            height: 100dvh; /* スマホのアドレスバー分を考慮して画面内に収める */
             width: 100vw;
+            overflow: hidden; /* ゲーム画面はスクロールしないようにする */
         }
 
         #header {
@@ -164,15 +168,27 @@
         #board {
             flex-grow: 1;
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 15px;
-            padding: 20px;
+            /* スマホ向けデフォルト（縦画面に合わせる）：3列×4行 に変更 */
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 10px;
+            padding: 10px;
             max-width: 1200px;
             margin: 0 auto;
             width: 100%;
         }
 
+        @media (min-width: 768px) {
+            #board {
+                /* PC・タブレット向け（横画面に合わせる）：4列×3行 */
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: repeat(3, 1fr);
+                gap: 15px;
+                padding: 20px;
+            }
+        }
+
+        .slot {
         .slot {
             display: flex;
             align-items: center;
@@ -187,7 +203,7 @@
             justify-content: center;
             width: 100%;
             height: 100%;
-            font-size: 2.2vh; /* 分類名が長いのでフォントサイズを縮小 */
+            font-size: clamp(11px, 3.5vw, 24px); /* スマホなど画面幅に応じて文字サイズを柔軟に変更 */
             line-height: 1.3;
             font-weight: bold;
             border-radius: 12px;
@@ -195,12 +211,12 @@
             cursor: pointer;
             transition: transform 0.1s, opacity 0.3s, background-color 0.2s;
             text-align: center;
-            padding: 5px 10px;
+            padding: 5px 8px;
             word-break: keep-all; /* 単語の途中での改行を防ぐ */
         }
 
         @media (min-width: 768px) {
-            .card { font-size: 2.8vh; }
+            .card { font-size: clamp(16px, 2.8vh, 32px); }
         }
 
         .card:active {
