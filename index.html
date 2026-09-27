@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>物質の分類分けペアマッチ</title>
+    <style>
+        :root {
+            --bg-color: #eef2ff;
+            --primary-color: #3b82f6;
+            --substance-bg: #e0f2fe; /* 物質名の背景（薄い青） */
+            --substance-border: #7dd3fc;
+            --category-bg: #dcfce7; /* 分類名の背景（薄い緑） */
+            --category-border: #86efac;
+            --selected-border: #fbbf24;
+            --selected-bg: #fef3c7;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'Hiragino Maru Gothic ProN', 'Rounded M+ 1c', 'Meiryo', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: #1f2937;
+            overflow: hidden; /* スクロール防止 */
+            touch-action: manipulation;
+        }
+
+        #home-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            background: linear-gradient(135deg, #eef2ff, #e0f2fe);
+        }
+
+        h1 {
+            font-size: 7vw; /* タイトルが長くなったので少し縮小 */
+            margin-bottom: 40px;
+            color: #1e3a8a;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        .mode-btn {
+            font-size: 3vw;
+            font-weight: bold;
+            padding: 20px 40px;
+            margin: 10px;
+            border: none;
+            border-radius: 50px;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.1s, background-color 0.2s;
+            width: 70%;
+            max-width: 400px;
+        }
+
+        .mode-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .mode-btn.endless {
+            background-color: #8b5cf6;
+        }
+
+        #game-screen {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            height: 80px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .time-box {
+            color: #dc2626;
+            width: 120px;
+        }
+
+        .score-box {
+            color: #059669;
+        }
+
+        .home-btn-small {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            background-color: #9ca3af;
+            color: white;
+            cursor: pointer;
+        }
+
+        #round-clear-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: 8vw;
+            font-weight: 900;
+            color: #ef4444;
+            text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 5px 5px 15px rgba(0,0,0,0.3);
+            z-index: 150;
+            pointer-events: none;
+            opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+            text-align: center;
+        }
+
+        #round-clear-display.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        #combo-display {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: 60px;
+            font-weight: 900;
+            color: #f59e0b;
+            text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 4px 4px 10px rgba(0,0,0,0.3);
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
+        }
+
+        #combo-display.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        #board {
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 15px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .slot {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background-color: rgba(0,0,0,0.03);
+        }
+
+        .card {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            font-size: 2.2vh; /* 分類名が長いのでフォントサイズを縮小 */
+            line-height: 1.3;
+            font-weight: bold;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.3s, background-color 0.2s;
+            text-align: center;
+            padding: 5px 10px;
+            word-break: keep-all; /* 単語の途中での改行を防ぐ */
+        }
+
+        @media (min-width: 768px) {
+            .card { font-size: 2.8vh; }
+        }
+
+        .card:active {
+            transform: scale(0.95);
+        }
+
+        .card.type-substance {
+            background-color: var(--substance-bg);
+            border: 3px solid var(--substance-border);
+            color: #0369a1;
+        }
+
+        .card.type-category {
+            background-color: var(--category-bg);
+            border: 3px solid var(--category-border);
+            color: #166534;
+        }
+
+        .card.selected {
+            background-color: var(--selected-bg) !important;
+            border-color: var(--selected-border) !important;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
+            color: #92400e !important;
+        }
+
+        .card.matched {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(1.2);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+        }
+        .shake {
+            animation: shake 0.4s;
+            background-color: #fecaca !important;
+            border-color: #ef4444 !important;
+        }
+
+        #countdown-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 300;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #countdown-text {
+            font-size: 25vw;
+            font-weight: 900;
+            color: white;
+            text-shadow: 4px 4px 15px rgba(0,0,0,0.5);
+            opacity: 0;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            40% { transform: scale(1.1); opacity: 1; }
+            60% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop { animation: popIn 1s ease-out; }
+
+        #result-screen {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 200;
+        }
+
+        #result-stamp {
+            font-size: 8vw;
+            font-weight: 900;
+            color: white;
+            text-shadow: 4px 4px 0 rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            transform: rotate(-10deg);
+        }
+
+        #result-score {
+            font-size: 25vw;
+            font-weight: 900;
+            color: white;
+            line-height: 1;
+            text-shadow: 8px 8px 0 rgba(0,0,0,0.3);
+        }
+
+        .score-unit { font-size: 8vw; }
+
+        #result-time {
+            font-size: 8vw;
+            font-weight: bold;
+            color: white;
+            margin-top: 20px;
+            text-shadow: 3px 3px 0 rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        #result-home-btn {
+            position: absolute;
+            bottom: 30px;
+            padding: 15px 40px;
+            font-size: 3vw;
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #333;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        #study-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            background-color: var(--bg-color);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        #study-screen h2 {
+            font-size: 5vw;
+            color: #1e3a8a;
+            margin-bottom: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .study-explanation {
+            background-color: #fff;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 1000px;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #374151;
+            border-left: 5px solid var(--primary-color);
+        }
+
+        .study-explanation ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .study-explanation p {
+            margin: 0;
+        }
+
+        .study-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 40px;
+        }
+
+        .study-item {
+            display: flex;
+            flex-direction: column; /* 分類名が長いため縦並びに変更 */
+            justify-content: center;
+            align-items: center;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            font-size: 20px;
+            font-weight: bold;
+            gap: 8px;
+        }
+
+        .study-substance {
+            color: #0369a1;
+            background-color: var(--substance-bg);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 2px solid var(--substance-border);
+            width: 100%;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .study-formula-text {
+            font-size: 0.85em;
+            color: #111827;
+            font-family: 'Times New Roman', serif;
+        }
+
+        .study-category {
+            color: #166534;
+            background-color: var(--category-bg);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 2px solid var(--category-border);
+            width: 100%;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .study-home-btn {
+            padding: 15px 40px;
+            font-size: 3vw;
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            background-color: #9ca3af;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+            width: 60%;
+            max-width: 400px;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ホーム画面 -->
+    <div id="home-screen">
+        <h1>物質の分類分け<br>ペアマッチ！</h1>
+        <button class="mode-btn" onclick="startGame('1min')">1分モード</button>
+        <button class="mode-btn" onclick="startGame('3min')">3分モード</button>
+        <button class="mode-btn endless" onclick="startGame('endless')">時間制限なしモード</button>
+        <button class="mode-btn" style="background-color: #10b981; margin-top: 40px;" onclick="openStudyScreen()">📖 学習する（一覧表）</button>
+    </div>
+
+    <!-- 学習画面 -->
+    <div id="study-screen">
+        <h2>物質の分類分け 一覧表</h2>
+        
+        <div class="study-explanation">
+            <p><strong>【分子を作る・作らないの考え方】</strong></p>
+            <ul>
+                <li><strong>金属</strong>を含む場合は<strong>分子を作らない</strong>。</li>
+                <li>金属を含まない場合でも、例外として<strong>炭素</strong>と<strong>硫黄</strong>は<strong>分子を作らない</strong>。</li>
+                <li>それ以外のものは<strong>分子を作る</strong>。</li>
+            </ul>
+            <p>※以下の表では、化学式のうち<span style="color:red; font-weight:bold;">金属元素を赤</span>で、非金属元素を黒で表示しています。</p>
+        </div>
+
+        <div class="study-list" id="study-list">
+            <!-- JSで動的に生成されます -->
+        </div>
+        <button class="study-home-btn" onclick="closeStudyScreen()">ホームに戻る</button>
+    </div>
+
+    <!-- ゲーム画面 -->
+    <div id="game-screen">
+        <div id="header">
+            <div class="stats">
+                <div class="time-box">残り: <span id="time-display">0:00</span></div>
+                <div class="score-box">記録: <span id="score-display">0</span>組</div>
+            </div>
+            <button class="home-btn-small" onclick="goHome()">ホームに戻る</button>
+        </div>
+        
+        <div id="combo-display">2 COMBO!</div>
+        <div id="round-clear-display">1周目クリア！</div>
+
+        <div id="board">
+            <div class="slot" id="slot-0"></div>
+            <div class="slot" id="slot-1"></div>
+            <div class="slot" id="slot-2"></div>
+            <div class="slot" id="slot-3"></div>
+            <div class="slot" id="slot-4"></div>
+            <div class="slot" id="slot-5"></div>
+            <div class="slot" id="slot-6"></div>
+            <div class="slot" id="slot-7"></div>
+            <div class="slot" id="slot-8"></div>
+            <div class="slot" id="slot-9"></div>
+            <div class="slot" id="slot-10"></div>
+            <div class="slot" id="slot-11"></div>
+        </div>
+    </div>
+
+    <!-- 結果画面 -->
+    <div id="result-screen">
+        <div id="result-stamp">GREAT!</div>
+        <div id="result-score">25<span class="score-unit">組</span></div>
+        <div id="result-time">タイム: 1分23秒</div>
+        <button id="result-home-btn" onclick="goHome()">ホーム画面に戻る</button>
+    </div>
+
+    <!-- カウントダウン画面 -->
+    <div id="countdown-overlay">
+        <div id="countdown-text">3</div>
+    </div>
+
+<script>
+    // 物質データ（全25種）
+    const masterSubstances = [
+        // 混合物
+        { substance: "空気", formula: "", category: "混合物" },
+        { substance: "塩酸", formula: "", category: "混合物" },
+        { substance: "海水", formula: "", category: "混合物" },
+        { substance: "食塩水", formula: "", category: "混合物" },
+        { substance: "砂糖水", formula: "", category: "混合物" },
+        // 分子を作る単体
+        { substance: "水素", formula: "H<sub>2</sub>", category: "分子を作る単体" },
+        { substance: "酸素", formula: "O<sub>2</sub>", category: "分子を作る単体" },
+        { substance: "塩素", formula: "Cl<sub>2</sub>", category: "分子を作る単体" },
+        { substance: "窒素", formula: "N<sub>2</sub>", category: "分子を作る単体" },
+        { substance: "オゾン", formula: "O<sub>3</sub>", category: "分子を作る単体" },
+        // 分子を作る化合物
+        { substance: "水", formula: "H<sub>2</sub>O", category: "分子を作る化合物" },
+        { substance: "二酸化炭素", formula: "CO<sub>2</sub>", category: "分子を作る化合物" },
+        { substance: "アンモニア", formula: "NH<sub>3</sub>", category: "分子を作る化合物" },
+        { substance: "メタン", formula: "CH<sub>4</sub>", category: "分子を作る化合物" },
+        { substance: "塩化水素", formula: "HCl", category: "分子を作る化合物" },
+        // 分子を作らない単体
+        { substance: "炭素", formula: "C", category: "分子を作らない単体" },
+        { substance: "硫黄", formula: "S", category: "分子を作らない単体" },
+        { substance: "銅", formula: "<span style='color:red;'>Cu</span>", category: "分子を作らない単体" },
+        { substance: "亜鉛", formula: "<span style='color:red;'>Zn</span>", category: "分子を作らない単体" },
+        { substance: "鉄", formula: "<span style='color:red;'>Fe</span>", category: "分子を作らない単体" },
+        // 分子を作らない化合物
+        { substance: "塩化ナトリウム", formula: "<span style='color:red;'>Na</span>Cl", category: "分子を作らない化合物" },
+        { substance: "炭酸水素ナトリウム", formula: "<span style='color:red;'>Na</span>HCO<sub>3</sub>", category: "分子を作らない化合物" },
+        { substance: "酸化銅", formula: "<span style='color:red;'>Cu</span>O", category: "分子を作らない化合物" },
+        { substance: "硫化鉄", formula: "<span style='color:red;'>Fe</span>S", category: "分子を作らない化合物" },
+        { substance: "酸化銀", formula: "<span style='color:red;'>Ag</span><sub>2</sub>O", category: "分子を作らない化合物" }
+    ];
+
+    let currentMode = '';
+    let timerInterval = null;
+    let countdownTimeout = null; 
+    let timeRemaining = 0; 
+    let timeElapsed = 0;   
+    
+    let score = 0;
+    let combo = 0;
+    let clearedPairsSinceLastRefill = 0; 
+    let roundCount = 1; 
+    
+    let remainingPairs = []; 
+    let boardSlots = new Array(12).fill(null); 
+    
+    let firstSelectedCard = null;
+    let isProcessing = false; 
+
+    const homeScreen = document.getElementById('home-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const timeDisplay = document.getElementById('time-display');
+    const scoreDisplay = document.getElementById('score-display');
+    const comboDisplay = document.getElementById('combo-display');
+    const roundClearDisplay = document.getElementById('round-clear-display');
+    
+    const resultStamp = document.getElementById('result-stamp');
+    const resultScore = document.getElementById('result-score');
+    const resultTime = document.getElementById('result-time');
+
+    function shuffleArray(array) {
+        const arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function startGame(mode) {
+        currentMode = mode;
+        score = 0;
+        combo = 0;
+        timeElapsed = 0;
+        clearedPairsSinceLastRefill = 0;
+        roundCount = 1;
+        firstSelectedCard = null;
+        isProcessing = true; 
+        
+        scoreDisplay.innerText = score;
+        comboDisplay.classList.remove('show');
+        roundClearDisplay.classList.remove('show');
+        
+        if (mode === '1min') {
+            timeRemaining = 60;
+            document.querySelector('.time-box').innerHTML = '残り: <span id="time-display">1:00</span>';
+        } else if (mode === '3min') {
+            timeRemaining = 180;
+            document.querySelector('.time-box').innerHTML = '残り: <span id="time-display">3:00</span>';
+        } else {
+            timeRemaining = 0; 
+            document.querySelector('.time-box').innerHTML = '経過: <span id="time-display">0:00</span>';
+        }
+
+        initRound();
+
+        homeScreen.style.display = 'none';
+        resultScreen.style.display = 'none';
+        gameScreen.style.display = 'flex';
+
+        startCountdown();
+    }
+
+    function startCountdown() {
+        const overlay = document.getElementById('countdown-overlay');
+        const textEl = document.getElementById('countdown-text');
+        overlay.style.display = 'flex';
+        
+        let count = 3;
+        
+        function tick() {
+            if (count > 0) {
+                textEl.innerText = count;
+                textEl.classList.remove('pop');
+                void textEl.offsetWidth; 
+                textEl.classList.add('pop');
+                
+                countdownTimeout = setTimeout(() => {
+                    count--;
+                    tick();
+                }, 1000);
+            } else if (count === 0) {
+                textEl.innerText = 'START!';
+                textEl.style.color = '#fbbf24'; 
+                textEl.classList.remove('pop');
+                void textEl.offsetWidth;
+                textEl.classList.add('pop');
+                
+                countdownTimeout = setTimeout(() => {
+                    overlay.style.display = 'none';
+                    isProcessing = false; 
+                    textEl.style.color = 'white'; 
+                    
+                    clearInterval(timerInterval);
+                    timerInterval = setInterval(updateTimer, 1000);
+                }, 1000);
+            }
+        }
+        
+        tick();
+    }
+
+    function initRound() {
+        // 全25ペアをシャッフル
+        remainingPairs = shuffleArray(masterSubstances);
+        boardSlots = new Array(12).fill(null);
+        
+        for(let i=0; i<12; i++){
+            document.getElementById(`slot-${i}`).innerHTML = '';
+        }
+
+        // 初期盤面の作成（6ペア=12枚）
+        let initialCards = [];
+        for(let i=0; i<6; i++) {
+            const pair = remainingPairs.pop();
+            // 今回は判定用に category を持たせる
+            initialCards.push({ id: `sub_${i}`, text: pair.substance, type: 'substance', category: pair.category });
+            initialCards.push({ id: `cat_${i}`, text: pair.category, type: 'category', category: pair.category });
+        }
+        initialCards = shuffleArray(initialCards);
+
+        for(let i=0; i<12; i++) {
+            boardSlots[i] = initialCards[i];
+            createCardElement(initialCards[i], i);
+        }
+    }
+
+    function createCardElement(cardData, slotIndex) {
+        const cardEl = document.createElement('div');
+        cardEl.className = `card type-${cardData.type}`;
+        cardEl.innerHTML = cardData.text;
+        cardEl.dataset.slot = slotIndex;
+        cardEl.dataset.category = cardData.category; // マッチ判定用
+        cardEl.dataset.type = cardData.type;
+        
+        cardEl.addEventListener('click', () => handleCardClick(cardEl));
+        
+        const slotEl = document.getElementById(`slot-${slotIndex}`);
+        slotEl.innerHTML = ''; 
+        slotEl.appendChild(cardEl);
+        
+        cardEl.style.opacity = '0';
+        setTimeout(() => cardEl.style.opacity = '1', 50);
+    }
+
+    function handleCardClick(cardEl) {
+        if (isProcessing || cardEl.classList.contains('matched')) return;
+        
+        if (firstSelectedCard === cardEl) {
+            cardEl.classList.remove('selected');
+            firstSelectedCard = null;
+            return;
+        }
+
+        if (!firstSelectedCard) {
+            cardEl.classList.add('selected');
+            firstSelectedCard = cardEl;
+            return;
+        }
+
+        isProcessing = true;
+        const secondSelectedCard = cardEl;
+        secondSelectedCard.classList.add('selected');
+
+        // 判定：カテゴリ（分類名）が一致し、かつカードの種類（物質名と分類名）が異なること
+        if (firstSelectedCard.dataset.category === secondSelectedCard.dataset.category 
+            && firstSelectedCard.dataset.type !== secondSelectedCard.dataset.type) {
+            handleMatch(firstSelectedCard, secondSelectedCard);
+        } else {
+            handleMismatch(firstSelectedCard, secondSelectedCard);
+        }
+    }
+
+    function handleMatch(card1, card2) {
+        score++;
+        combo++;
+        clearedPairsSinceLastRefill++;
+        scoreDisplay.innerText = score;
+        
+        if (combo >= 2) {
+            comboDisplay.innerText = `${combo} COMBO!`;
+            comboDisplay.classList.remove('show');
+            void comboDisplay.offsetWidth; 
+            comboDisplay.classList.add('show');
+            setTimeout(() => comboDisplay.classList.remove('show'), 1500);
+        }
+
+        card1.classList.add('matched');
+        card2.classList.add('matched');
+        card1.classList.remove('selected');
+        card2.classList.remove('selected');
+
+        const slot1 = parseInt(card1.dataset.slot);
+        const slot2 = parseInt(card2.dataset.slot);
+
+        boardSlots[slot1] = null;
+        boardSlots[slot2] = null;
+
+        setTimeout(() => {
+            if (card1.parentNode) card1.parentNode.innerHTML = '';
+            if (card2.parentNode) card2.parentNode.innerHTML = '';
+
+            // 全25ペア完了判定
+            if (score > 0 && score % masterSubstances.length === 0) {
+                isProcessing = true; 
+                
+                roundClearDisplay.innerText = `${roundCount}周目クリア！`;
+                roundClearDisplay.classList.remove('show');
+                void roundClearDisplay.offsetWidth; 
+                roundClearDisplay.classList.add('show');
+                
+                setTimeout(() => {
+                    roundClearDisplay.classList.remove('show');
+                    roundCount++;
+                    clearedPairsSinceLastRefill = 0;
+                    initRound(); 
+                    firstSelectedCard = null;
+                    isProcessing = false;
+                }, 1500); 
+                return; 
+            }
+
+            // まとめ補充システム（3ペア揃うごとに補充）
+            if (clearedPairsSinceLastRefill >= 3 && remainingPairs.length > 0) {
+                const pairsToRefill = Math.min(3, remainingPairs.length);
+                let newCards = [];
+                
+                for(let i=0; i<pairsToRefill; i++) {
+                    const nextPair = remainingPairs.pop();
+                    newCards.push({ text: nextPair.substance, type: 'substance', category: nextPair.category });
+                    newCards.push({ text: nextPair.category, type: 'category', category: nextPair.category });
+                }
+                
+                newCards = shuffleArray(newCards);
+                
+                let emptySlotIndices = [];
+                for(let i=0; i<12; i++) {
+                    if(boardSlots[i] === null) {
+                        emptySlotIndices.push(i);
+                    }
+                }
+                
+                for(let i=0; i<newCards.length; i++) {
+                    const targetSlot = emptySlotIndices[i];
+                    boardSlots[targetSlot] = newCards[i];
+                    createCardElement(newCards[i], targetSlot);
+                }
+                
+                clearedPairsSinceLastRefill = 0;
+            }
+            
+            firstSelectedCard = null;
+            isProcessing = false;
+        }, 300); 
+    }
+
+    function handleMismatch(card1, card2) {
+        combo = 0; 
+        
+        card1.classList.add('shake');
+        card2.classList.add('shake');
+
+        setTimeout(() => {
+            card1.classList.remove('shake', 'selected');
+            card2.classList.remove('shake', 'selected');
+            firstSelectedCard = null;
+            isProcessing = false;
+        }, 400); 
+    }
+
+    function updateTimer() {
+        timeElapsed++;
+        
+        let displaySec = 0;
+        let displayMin = 0;
+
+        if (currentMode === '1min' || currentMode === '3min') {
+            timeRemaining--;
+            displayMin = Math.floor(timeRemaining / 60);
+            displaySec = timeRemaining % 60;
+            
+            if (timeRemaining <= 0) {
+                endGame(false);
+            }
+        } else {
+            displayMin = Math.floor(timeElapsed / 60);
+            displaySec = timeElapsed % 60;
+        }
+        
+        const timeDisplayEl = document.getElementById('time-display');
+        if (timeDisplayEl) {
+            timeDisplayEl.innerText = `${displayMin}:${displaySec.toString().padStart(2, '0')}`;
+        }
+    }
+
+    function endGame(isPerfect) {
+        clearInterval(timerInterval);
+        gameScreen.style.display = 'none';
+        resultScreen.style.display = 'flex';
+
+        resultScore.innerHTML = `${score}<span class="score-unit">組</span>`;
+
+        const min = Math.floor(timeElapsed / 60);
+        const sec = timeElapsed % 60;
+        const timeString = min > 0 ? `${min}分${sec}秒` : `${sec}秒`;
+
+        // 獲得スコアに応じた評価ランク（全25ペアベースに調整）
+        if (score >= 150) { 
+            resultScreen.style.background = 'linear-gradient(135deg, #020617, #312e81, #9d174d)'; 
+            resultStamp.innerText = 'ULTIMATE!!';
+            resultTime.style.display = 'block';
+            resultTime.innerText = `タイム: ${timeString}`;
+        } else if (score >= 125) { 
+            resultScreen.style.background = 'linear-gradient(135deg, #111827, #f59e0b, #111827)'; 
+            resultStamp.innerText = 'LEGEND!!';
+            resultTime.style.display = 'block';
+            resultTime.innerText = `タイム: ${timeString}`;
+        } else if (score >= 100) { 
+            resultScreen.style.background = 'linear-gradient(135deg, #7e22ce, #db2777)'; 
+            resultStamp.innerText = 'GENIUS!!';
+            resultTime.style.display = 'block';
+            resultTime.innerText = `タイム: ${timeString}`;
+        } else if (score >= 75) { 
+            resultScreen.style.background = 'linear-gradient(135deg, #4338ca, #06b6d4)'; 
+            resultStamp.innerText = 'FANTASTIC!!';
+            resultTime.style.display = 'block';
+            resultTime.innerText = `タイム: ${timeString}`;
+        } else if (score >= 50) { 
+            resultScreen.style.background = 'linear-gradient(135deg, #be123c, #fbbf24)'; 
+            resultStamp.innerText = 'UNBELIEVABLE!';
+            resultTime.style.display = 'block';
+            resultTime.innerText = `タイム: ${timeString}`;
+        } else if (score >= 38) { 
+             resultScreen.style.background = 'linear-gradient(135deg, #ef4444, #f97316)'; 
+             resultStamp.innerText = 'GOD!!';
+             resultTime.style.display = 'block';
+             resultTime.innerText = `タイム: ${timeString}`;
+        } else if (score >= 25) { // 1周クリア
+            resultScreen.style.background = 'linear-gradient(135deg, #f43f5e, #fb923c)'; 
+            resultStamp.innerText = 'PERFECT!!';
+            resultTime.style.display = 'block';
+            resultTime.innerText = `タイム: ${timeString}`;
+        } else if (score >= 20) {
+            resultScreen.style.background = 'linear-gradient(135deg, #f59e0b, #fbbf24)';
+            resultStamp.innerText = 'EXCELLENT!';
+            resultTime.style.display = 'none';
+        } else if (score >= 12) {
+            resultScreen.style.background = 'linear-gradient(135deg, #10b981, #34d399)';
+            resultStamp.innerText = 'GREAT!';
+            resultTime.style.display = 'none';
+        } else {
+            resultScreen.style.background = 'linear-gradient(135deg, #3b82f6, #60a5fa)';
+            resultStamp.innerText = 'GOOD!';
+            resultTime.style.display = 'none';
+        }
+    }
+
+    function goHome() {
+        clearInterval(timerInterval);
+        clearTimeout(countdownTimeout);
+        document.getElementById('countdown-overlay').style.display = 'none';
+        resultScreen.style.display = 'none';
+        gameScreen.style.display = 'none';
+        homeScreen.style.display = 'flex';
+    }
+
+    function openStudyScreen() {
+        homeScreen.style.display = 'none';
+        document.getElementById('study-screen').style.display = 'flex';
+        
+        const studyList = document.getElementById('study-list');
+        if (studyList.children.length === 0) {
+            masterSubstances.forEach(sub => {
+                const item = document.createElement('div');
+                item.className = 'study-item';
+                item.innerHTML = `
+                    <div class="study-substance">
+                        <span>${sub.substance}</span>
+                        ${sub.formula ? `<span class="study-formula-text">(${sub.formula})</span>` : ''}
+                    </div>
+                    <div class="study-category">${sub.category}</div>
+                `;
+                studyList.appendChild(item);
+            });
+        }
+    }
+
+    function closeStudyScreen() {
+        document.getElementById('study-screen').style.display = 'none';
+        homeScreen.style.display = 'flex';
+    }
+</script>
+</body>
+</html>
